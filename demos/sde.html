@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diffusion Model Visualization</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #111; font-family: sans-serif; }
+        #chart-container { width: 100vw; height: 100vh; }
+        .controls { position: absolute; top: 10px; left: 10px; z-index: 100; color: #888; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+<div class="controls">Rendering Diffusion Process...</div>
+<div id="chart-container"></div>
+
+<script>
+/**
+ * CONFIGURATION & MATH SETUP
+ * We simulate an Ornstein-Uhlenbeck process: dx = -0.5 * x * dt + dw
+ * This transforms any distribution into a Standard Normal N(0,1) over time.
+ */
+const CONFIG = {
+    steps: 200,          // Time steps
+    paths: 20,           // Number of jagged lines to draw
+    T: 4.0,              // End time
+    xRange: [-4, 4],     // Y-axis range
+    dt: 0.02             // T / steps
+};
+
+// 1. GENERATE DATA
+function generateSimulation() {
+    const t = Array.from({length: CONFIG.steps}, (_, i) => i * CONFIG.dt);
+    const xGrid = Array.from({length: 100}, (_, i) => -4 + i * (8/99));
+    
+    // --- A. ANALYTICAL DENSITY (The Heatmap) ---
+    // We start with a mixture of two Gaussians at -2 and +2
+    // They decay towards 0 while variance increases to 1.
+    const densityZ = [];
+    
+    // Helper: Gaussian PDF
+    const normPdf = (x, mu, sigma) => 
+        (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * ((x - mu) / sigma) ** 2);
+
+    for (let j = 0; j < xGrid.length; j++) {
+        const row = [];
+        const x = xGrid[j];
+        for (let i = 0; i < CONFIG.steps; i++) {
+            const currT = t[i];
+            
+            // Analytical evolution of VP-SDE
+            const muDecay = Math.exp(-0.5 * currT);
+            const varT = 1 - Math.exp(-currT);
+            const sigmaT = Math.sqrt(varT + 0.05); // +0.05 for numerical stability at t=0
+
+            // Mixture of two peaks evolving
+            const p1 = normPdf(x, -2 * muDecay, sigmaT);
+            const p2 = normPdf(x, 2 * muDecay, sigmaT);
+            
+            row.push(0.5 * p1 + 0.5 * p2);
+        }
+        densityZ.push(row);
+    }
+
+    // --- B. STOCHASTIC PATHS (The Jagged Lines) ---
+    const sdePaths = [];
+    // Initialize half at -2, half at +2
+    for(let p=0; p<CONFIG.paths; p++) {
+        const path = [ (p % 2 === 0 ? -2 : 2) + (Math.random()-0.5)*0.5 ]; // Start with slight noise
+        for(let i=1; i<CONFIG.steps; i++) {
+            const prevX = path[i-1];
+            const noise = (Math.random() - 0.5) * 2 * Math.sqrt(3) * Math.sqrt(CONFIG.dt); // approx normal
+            // Euler-Maruyama: dx = -0.5*x*dt + dw
+            const nextX = prevX + (-0.5 * prevX * CONFIG.dt) + noise;
+            path.push(nextX);
+        }
+        sdePaths.push(path);
+    }
+
+    // --- C. PROBABILITY FLOW ODE (The White Lines) ---
+    // Deterministic decay: x(t) = x(0) * exp(-0.5t)
+    const odeUpper = t.map(time => 2 * Math.exp(-0.5 * time));
+    const odeLower = t.map(time => -2 * Math.exp(-0.5 * time));
+
+    // --- D. MARGINALS ---
+    // Initial Distribution (t=0)
+    const marginalData = xGrid.map(x => 0.5*normPdf(x, -2, 0.2) + 0.5*normPdf(x, 2, 0.2));
+    // Prior Distribution (t=T) -> Approx Standard Normal
+    const marginalPrior = xGrid.map(x => normPdf(x, 0, 1));
+
+    return { t, xGrid, densityZ, sdePaths, odeUpper, odeLower, marginalData, marginalPrior };
+}
+
+const sim = generateSimulation();
+
+
+// 2. CONSTRUCT PLOTLY TRACES
+const traces = [];
+
+// --- COLOR PALETTE ---
+// Generate rainbow colors for the SDE paths
+const getLineColor = (i) => {
+    const hue = (i / CONFIG.paths) * 360;
+    return `hsla(${hue}, 70%, 60%, 0.7)`;
+};
+
+// =========================================================
+// PANEL 1: DATA MARGINAL (Far Left)
+// =========================================================
+traces.push({
+    x: sim.marginalData,
+    y: sim.xGrid,
+    xaxis: 'x', yaxis: 'y',
+    type: 'scatter', mode: 'lines',
+    line: { color: '#440154', width: 3 },
+    fill: 'tozerox', fillcolor: 'rgba(68,1,84,0.3)',
+    name: 'p_data'
+});
+
+// =========================================================
+// PANEL 2: FORWARD PROCESS (Middle Left)
+// =========================================================
+// A. Heatmap Background
+traces.push({
+    z: sim.densityZ,
+    x: sim.t,
+    y: sim.xGrid,
+    xaxis: 'x2', yaxis: 'y',
+    type: 'heatmap',
+    colorscale: 'Viridis',
+    showscale: false,
+    zmin: 0, zmax: 0.4
+});
+
+// B. SDE Paths (Jagged)
+sim.sdePaths.forEach((path, i) => {
+    traces.push({
+        x: sim.t, y: path,
+        xaxis: 'x2', yaxis: 'y',
+        type: 'scattergl', mode: 'lines',
+        line: { color: getLineColor(i), width: 1.5 },
+        hoverinfo: 'skip'
+    });
+});
+
+// C. ODE Paths (White Smooth)
+[sim.odeUpper, sim.odeLower].forEach(path => {
+    traces.push({
+        x: sim.t, y: path,
+        xaxis: 'x2', yaxis: 'y',
+        type: 'scatter', mode: 'lines',
+        line: { color: 'white', width: 3 },
+        hoverinfo: 'skip'
+    });
+});
+
+
+// =========================================================
+// PANEL 3: PRIOR MARGINAL (Center)
+// =========================================================
+traces.push({
+    x: sim.marginalPrior,
+    y: sim.xGrid,
+    xaxis: 'x3', yaxis: 'y',
+    type: 'scatter', mode: 'lines',
+    line: { color: '#21918c', width: 3 },
+    fill: 'tozerox', fillcolor: 'rgba(33,145,140,0.3)'
+});
+
+// =========================================================
+// PANEL 4: REVERSE PROCESS (Middle Right)
+// We reverse the Time arrays for visualization
+// =========================================================
+const tReversed = [...sim.t].reverse();
+
+// A. Heatmap (Same data, just logically reversed direction in layout or time)
+// Note: For visual symmetry with the image, we actually want the time axis to go 
+// from T -> 0 visually.
+traces.push({
+    z: sim.densityZ, // Data is same, x-axis mapping will handle the flip
+    x: sim.t,        // We map this to x4, which we will invert in layout
+    y: sim.xGrid,
+    xaxis: 'x4', yaxis: 'y',
+    type: 'heatmap',
+    colorscale: 'Viridis',
+    showscale: false,
+    zmin: 0, zmax: 0.4
+});
+
+// B. SDE Paths (Reversed)
+sim.sdePaths.forEach((path, i) => {
+    traces.push({
+        x: sim.t, y: path,
+        xaxis: 'x4', yaxis: 'y',
+        type: 'scattergl', mode: 'lines',
+        line: { color: getLineColor(i), width: 1.5 },
+        hoverinfo: 'skip'
+    });
+});
+
+// C. ODE Paths (Reversed)
+[sim.odeUpper, sim.odeLower].forEach(path => {
+    traces.push({
+        x: sim.t, y: path,
+        xaxis: 'x4', yaxis: 'y',
+        type: 'scatter', mode: 'lines',
+        line: { color: 'white', width: 3 },
+        hoverinfo: 'skip'
+    });
+});
+
+// =========================================================
+// PANEL 5: DATA MARGINAL (Far Right - same as P1)
+// =========================================================
+traces.push({
+    x: sim.marginalData,
+    y: sim.xGrid,
+    xaxis: 'x5', yaxis: 'y',
+    type: 'scatter', mode: 'lines',
+    line: { color: '#440154', width: 3 },
+    fill: 'tozerox', fillcolor: 'rgba(68,1,84,0.3)'
+});
+
+
+// 3. LAYOUT & ANNOTATIONS
+const commonAxis = {
+    showgrid: false, zeroline: false, showticklabels: false,
+    range: [-4.2, 4.2] 
+};
+
+const layout = {
+    paper_bgcolor: '#fff', // White paper background like the academic figure
+    plot_bgcolor: 'rgba(0,0,0,0)',
+    showlegend: false,
+    margin: { l: 20, r: 20, t: 80, b: 50 },
+    
+    // Y Axis (Shared across all)
+    yaxis: { ...commonAxis, domain: [0, 1] },
+
+    // X Axes (Defining the 5 panels)
+    // 1. Data Marginal
+    xaxis: { 
+        domain: [0, 0.05], 
+        showgrid: false, zeroline: false, showticklabels: false, autorange: 'reversed' // Face inwards
+    },
+    // 2. Forward SDE
+    xaxis2: { 
+        domain: [0.06, 0.45], 
+        showgrid: false, zeroline: false, showticklabels: false 
+    },
+    // 3. Prior Marginal
+    xaxis3: { 
+        domain: [0.46, 0.54], 
+        showgrid: false, zeroline: false, showticklabels: false 
+    },
+    // 4. Reverse SDE (Note: range reversed to simulate T -> 0)
+    xaxis4: { 
+        domain: [0.55, 0.94], 
+        showgrid: false, zeroline: false, showticklabels: false,
+        autorange: 'reversed' // FLIP THIS AXIS for Reverse Process
+    },
+    // 5. Final Data Marginal
+    xaxis5: { 
+        domain: [0.95, 1.0], 
+        showgrid: false, zeroline: false, showticklabels: false 
+    },
+
+    // TEXT ANNOTATIONS (The math formulas)
+    annotations: [
+        {
+            text: "Data", x: 0.025, y: 1.1, xref: 'paper', yref: 'paper', showarrow: false, font: {size: 14, weight: 'bold'}
+        },
+        {
+            text: "Forward SDE", x: 0.25, y: 1.1, xref: 'paper', yref: 'paper', showarrow: false, font: {size: 14, weight: 'bold'}
+        },
+        {
+            text: "dx = f(x,t)dt + g(t)dw", x: 0.25, y: 1.05, xref: 'paper', yref: 'paper', showarrow: false, font: {family: 'Times New Roman', size: 16, style: 'italic'}
+        },
+        {
+            text: "Prior", x: 0.5, y: 1.1, xref: 'paper', yref: 'paper', showarrow: false, font: {size: 14, weight: 'bold'}
+        },
+        {
+            text: "Reverse SDE", x: 0.75, y: 1.1, xref: 'paper', yref: 'paper', showarrow: false, font: {size: 14, weight: 'bold'}
+        },
+        {
+            text: "dx = [f(x,t) - g²∇log p(x)]dt + g dw", x: 0.75, y: 1.05, xref: 'paper', yref: 'paper', showarrow: false, font: {family: 'Times New Roman', size: 16, style: 'italic'}
+        },
+        {
+            text: "Data", x: 0.975, y: 1.1, xref: 'paper', yref: 'paper', showarrow: false, font: {size: 14, weight: 'bold'}
+        },
+        // Bottom Labels
+        { text: "p₀(x)", x: 0.025, y: -0.05, xref: 'paper', yref: 'paper', showarrow: false, font: {family: 'Times New Roman', size: 14} },
+        { text: "pₜ(x)", x: 0.25, y: -0.05, xref: 'paper', yref: 'paper', showarrow: false, font: {family: 'Times New Roman', size: 14} },
+        { text: "p_T(x)", x: 0.5, y: -0.05, xref: 'paper', yref: 'paper', showarrow: false, font: {family: 'Times New Roman', size: 14} },
+        { text: "pₜ(x)", x: 0.75, y: -0.05, xref: 'paper', yref: 'paper', showarrow: false, font: {family: 'Times New Roman', size: 14} },
+        { text: "p₀(x)", x: 0.975, y: -0.05, xref: 'paper', yref: 'paper', showarrow: false, font: {family: 'Times New Roman', size: 14} },
+    ],
+    
+    // ARROWS (Using shapes for the timeline arrows)
+    shapes: [
+        // Arrow Forward
+        { type: 'line', x0: 0.06, y0: -0.08, x1: 0.45, y1: -0.08, xref: 'paper', yref: 'paper', line: {width: 2} },
+        { type: 'path', path: 'M 0.44 -0.07 L 0.45 -0.08 L 0.44 -0.09', xref: 'paper', yref: 'paper', line: {width: 2} },
+        // Arrow Reverse
+        { type: 'line', x0: 0.55, y0: -0.08, x1: 0.94, y1: -0.08, xref: 'paper', yref: 'paper', line: {width: 2} },
+        { type: 'path', path: 'M 0.93 -0.07 L 0.94 -0.08 L 0.93 -0.09', xref: 'paper', yref: 'paper', line: {width: 2} }
+    ]
+};
+
+Plotly.newPlot('chart-container', traces, layout, {responsive: true});
+
+</script>
+</body>
+</html>
