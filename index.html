@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diffusion Model Visualization - Visualize Your SDEs</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+        integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        header {
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e2e8f0;
+            background: white;
+            z-index: 10;
+        }
+
+        .logo {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1e293b;
+            text-decoration: none;
+        }
+
+        .controls {
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+
+        #chart-container {
+            flex-grow: 1;
+            width: 100%;
+        }
+
+        .github-link {
+            color: #64748b;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .github-link:hover {
+            color: #2563eb;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <a href="/" class="logo">Visualize Your SDEs</a>
+        <div class="controls">Diffusion Process Visualization</div>
+        <a href="https://github.com/Bili-Sakura/Visualize-Your-SDEs" class="github-link" target="_blank">
+            <i class="fab fa-github"></i>
+        </a>
+    </header>
+
+    <div id="chart-container"></div>
+
+    <script>
+        /**
+         * CONFIGURATION & MATH SETUP
+         * We simulate an Ornstein-Uhlenbeck process: dx = -0.5 * x * dt + dw
+         * This transforms any distribution into a Standard Normal N(0,1) over time.
+         */
+        const CONFIG = {
+            steps: 200,          // Time steps
+            paths: 20,           // Number of jagged lines to draw
+            T: 4.0,              // End time
+            xRange: [-4, 4],     // Y-axis range
+            dt: 0.02             // T / steps
+        };
+
+        // 1. GENERATE DATA
+        function generateSimulation() {
+            const t = Array.from({ length: CONFIG.steps }, (_, i) => i * CONFIG.dt);
+            const xGrid = Array.from({ length: 100 }, (_, i) => -4 + i * (8 / 99));
+
+            // --- A. ANALYTICAL DENSITY (The Heatmap) ---
+            const densityZ = [];
+            const normPdf = (x, mu, sigma) =>
+                (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * ((x - mu) / sigma) ** 2);
+
+            for (let j = 0; j < xGrid.length; j++) {
+                const row = [];
+                const x = xGrid[j];
+                for (let i = 0; i < CONFIG.steps; i++) {
+                    const currT = t[i];
+                    const muDecay = Math.exp(-0.5 * currT);
+                    const varT = 1 - Math.exp(-currT);
+                    const sigmaT = Math.sqrt(varT + 0.05);
+
+                    const p1 = normPdf(x, -2 * muDecay, sigmaT);
+                    const p2 = normPdf(x, 2 * muDecay, sigmaT);
+                    row.push(0.5 * p1 + 0.5 * p2);
+                }
+                densityZ.push(row);
+            }
+
+            // --- B. STOCHASTIC PATHS ---
+            const sdePaths = [];
+            for (let p = 0; p < CONFIG.paths; p++) {
+                const path = [(p % 2 === 0 ? -2 : 2) + (Math.random() - 0.5) * 0.5];
+                for (let i = 1; i < CONFIG.steps; i++) {
+                    const prevX = path[i - 1];
+                    const noise = (Math.random() - 0.5) * 2 * Math.sqrt(3) * Math.sqrt(CONFIG.dt);
+                    const nextX = prevX + (-0.5 * prevX * CONFIG.dt) + noise;
+                    path.push(nextX);
+                }
+                sdePaths.push(path);
+            }
+
+            // --- C. PROBABILITY FLOW ODE ---
+            const odeUpper = t.map(time => 2 * Math.exp(-0.5 * time));
+            const odeLower = t.map(time => -2 * Math.exp(-0.5 * time));
+
+            // --- D. MARGINALS ---
+            const marginalData = xGrid.map(x => 0.5 * normPdf(x, -2, 0.2) + 0.5 * normPdf(x, 2, 0.2));
+            const marginalPrior = xGrid.map(x => normPdf(x, 0, 1));
+
+            return { t, xGrid, densityZ, sdePaths, odeUpper, odeLower, marginalData, marginalPrior };
+        }
+
+        const sim = generateSimulation();
+
+        // 2. CONSTRUCT PLOTLY TRACES
+        const traces = [];
+        const getLineColor = (i) => {
+            const hue = (i / CONFIG.paths) * 360;
+            return `hsla(${hue}, 70%, 60%, 0.7)`;
+        };
+
+        // Panel 1: Data Marginal
+        traces.push({
+            x: sim.marginalData, y: sim.xGrid,
+            xaxis: 'x', yaxis: 'y', type: 'scatter', mode: 'lines',
+            line: { color: '#440154', width: 3 },
+            fill: 'tozerox', fillcolor: 'rgba(68,1,84,0.3)', name: 'p_data'
+        });
+
+        // Panel 2: Forward Process
+        traces.push({
+            z: sim.densityZ, x: sim.t, y: sim.xGrid,
+            xaxis: 'x2', yaxis: 'y', type: 'heatmap',
+            colorscale: 'Viridis', showscale: false, zmin: 0, zmax: 0.4
+        });
+
+        sim.sdePaths.forEach((path, i) => {
+            traces.push({
+                x: sim.t, y: path, xaxis: 'x2', yaxis: 'y',
+                type: 'scattergl', mode: 'lines',
+                line: { color: getLineColor(i), width: 1.5 }, hoverinfo: 'skip'
+            });
+        });
+
+        [sim.odeUpper, sim.odeLower].forEach(path => {
+            traces.push({
+                x: sim.t, y: path, xaxis: 'x2', yaxis: 'y',
+                type: 'scatter', mode: 'lines',
+                line: { color: 'white', width: 3 }, hoverinfo: 'skip'
+            });
+        });
+
+        // Panel 3: Prior Marginal
+        traces.push({
+            x: sim.marginalPrior, y: sim.xGrid,
+            xaxis: 'x3', yaxis: 'y', type: 'scatter', mode: 'lines',
+            line: { color: '#21918c', width: 3 },
+            fill: 'tozerox', fillcolor: 'rgba(33,145,140,0.3)'
+        });
+
+        // Panel 4: Reverse Process
+        traces.push({
+            z: sim.densityZ, x: sim.t, y: sim.xGrid,
+            xaxis: 'x4', yaxis: 'y', type: 'heatmap',
+            colorscale: 'Viridis', showscale: false, zmin: 0, zmax: 0.4
+        });
+
+        sim.sdePaths.forEach((path, i) => {
+            traces.push({
+                x: sim.t, y: path, xaxis: 'x4', yaxis: 'y',
+                type: 'scattergl', mode: 'lines',
+                line: { color: getLineColor(i), width: 1.5 }, hoverinfo: 'skip'
+            });
+        });
+
+        [sim.odeUpper, sim.odeLower].forEach(path => {
+            traces.push({
+                x: sim.t, y: path, xaxis: 'x4', yaxis: 'y',
+                type: 'scatter', mode: 'lines',
+                line: { color: 'white', width: 3 }, hoverinfo: 'skip'
+            });
+        });
+
+        // Panel 5: Final Data Marginal
+        traces.push({
+            x: sim.marginalData, y: sim.xGrid,
+            xaxis: 'x5', yaxis: 'y', type: 'scatter', mode: 'lines',
+            line: { color: '#440154', width: 3 },
+            fill: 'tozerox', fillcolor: 'rgba(68,1,84,0.3)'
+        });
+
+        // 3. LAYOUT
+        const commonAxis = { showgrid: false, zeroline: false, showticklabels: false, range: [-4.2, 4.2] };
+        const layout = {
+            paper_bgcolor: '#fff', plot_bgcolor: 'rgba(0,0,0,0)',
+            showlegend: false, margin: { l: 20, r: 20, t: 80, b: 50 },
+            yaxis: { ...commonAxis, domain: [0, 1] },
+            xaxis: { domain: [0, 0.05], showgrid: false, zeroline: false, showticklabels: false, autorange: 'reversed' },
+            xaxis2: { domain: [0.06, 0.45], showgrid: false, zeroline: false, showticklabels: false },
+            xaxis3: { domain: [0.46, 0.54], showgrid: false, zeroline: false, showticklabels: false },
+            xaxis4: { domain: [0.55, 0.94], showgrid: false, zeroline: false, showticklabels: false, autorange: 'reversed' },
+            xaxis5: { domain: [0.95, 1.0], showgrid: false, zeroline: false, showticklabels: false },
+            annotations: [
+                { text: "Data", x: 0.025, y: 1.1, xref: 'paper', yref: 'paper', showarrow: false, font: { size: 14, weight: 'bold' } },
+                { text: "Forward SDE", x: 0.25, y: 1.1, xref: 'paper', yref: 'paper', showarrow: false, font: { size: 14, weight: 'bold' } },
+                { text: "Prior", x: 0.5, y: 1.1, xref: 'paper', yref: 'paper', showarrow: false, font: { size: 14, weight: 'bold' } },
+                { text: "Reverse SDE", x: 0.75, y: 1.1, xref: 'paper', yref: 'paper', showarrow: false, font: { size: 14, weight: 'bold' } },
+                { text: "Data", x: 0.975, y: 1.1, xref: 'paper', yref: 'paper', showarrow: false, font: { size: 14, weight: 'bold' } }
+            ]
+        };
+
+        Plotly.newPlot('chart-container', traces, layout, { responsive: true });
+    </script>
+</body>
+
+</html>
