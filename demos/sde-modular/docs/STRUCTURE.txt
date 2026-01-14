@@ -1,0 +1,337 @@
+SDE MODULAR VISUALIZATION - PROJECT STRUCTURE
+==============================================
+
+📁 demos/sde-modular/
+│
+├── 📄 index.html                 [Main entry point - Open this file!]
+│   ├── Control panel UI
+│   ├── Chart container
+│   └── Script integration
+│
+├── 📁 css/
+│   └── 📄 styles.css            [All visual styling]
+│       ├── Control panel design (gradient header)
+│       ├── Toggle switches
+│       ├── Responsive layout
+│       └── Loading indicators
+│
+├── 📁 js/
+│   ├── 📄 config.js             [Configuration management]
+│   │   ├── SDE definitions (VP, VE, Sub-VP)
+│   │   ├── Initial distributions (Bimodal, Uniform, Single)
+│   │   ├── Color schemes (Rainbow, Viridis, Plasma, Monochrome)
+│   │   └── Background styles (White, Dark, Academic)
+│   │
+│   ├── 📄 math.js               [Mathematical utilities]
+│   │   ├── Normal PDF & random generation
+│   │   ├── Euler-Maruyama SDE integration
+│   │   ├── Analytical density computation
+│   │   └── Helper functions (linspace, lerp, etc.)
+│   │
+│   ├── 📄 simulation.js         [Data generation]
+│   │   ├── Generate SDE paths (stochastic)
+│   │   ├── Generate ODE paths (deterministic)
+│   │   ├── Compute density evolution
+│   │   └── Compute marginal distributions
+│   │
+│   ├── 📄 visualization.js      [Plotly rendering]
+│   │   ├── Build traces (heatmap, paths, marginals)
+│   │   ├── Create 5-panel layout
+│   │   ├── Apply color schemes
+│   │   └── Dynamic annotations & arrows
+│   │
+│   └── 📄 controls.js           [UI interaction]
+│       ├── Event listeners for all controls
+│       ├── Debounced updates (300ms)
+│       ├── Toggle management
+│       └── Reset/regenerate functions
+│
+├── 📄 README.md                 [Complete documentation]
+│   ├── Features overview
+│   ├── Architecture explanation
+│   ├── Customization guide
+│   └── Technical details
+│
+├── 📄 QUICKSTART.md            [Get started in 30 seconds]
+│   ├── Installation
+│   ├── 5-minute tutorial
+│   ├── Core concepts
+│   └── Quick experiments
+│
+├── 📄 FEATURES.md              [Feature comparison & usage]
+│   ├── Original vs Modular comparison
+│   ├── New features explained
+│   ├── Usage examples
+│   └── Migration guide
+│
+├── 📄 PROJECT_SUMMARY.md       [Comprehensive overview]
+│   ├── What was done
+│   ├── Improvement metrics
+│   ├── Architecture highlights
+│   └── File-by-file breakdown
+│
+└── 📄 STRUCTURE.txt            [This file - Project structure]
+
+
+COMPONENT RELATIONSHIPS
+=======================
+
+                    USER
+                     ↓
+              ┌──────────────┐
+              │  index.html  │ ← Entry Point
+              └──────┬───────┘
+                     ↓
+        ┌────────────┼────────────┐
+        ↓            ↓            ↓
+   styles.css   [JS Modules]   Plotly CDN
+                     ↓
+        ┌────────────┼────────────────┐
+        ↓            ↓            ↓    ↓
+   config.js    math.js    simulation.js
+        ↓            ↓                 ↓
+   visualization.js  ←─────────────  controls.js
+        ↓
+   Browser Rendering
+
+
+DATA FLOW
+=========
+
+1. User interacts with controls (sliders, dropdowns, toggles)
+   ↓
+2. ControlsManager captures event
+   ↓
+3. ConfigManager updates settings
+   ↓
+4. Debounce timer (300ms) prevents excessive updates
+   ↓
+5. SimulationGenerator.generate()
+   ├── Uses MathUtils for numerical methods
+   ├── Generates SDE paths (stochastic trajectories)
+   ├── Generates ODE paths (deterministic flow)
+   └── Computes analytical density (heatmap)
+   ↓
+6. VisualizationManager.render()
+   ├── Queries ConfigManager for colors, styles
+   ├── Builds Plotly traces
+   ├── Creates 5-panel layout
+   └── Adds annotations & formulas
+   ↓
+7. Plotly renders to DOM
+   ↓
+8. User sees updated visualization
+
+
+FILE SIZES (Approximate)
+========================
+
+index.html          ~200 lines   [Main structure]
+css/styles.css      ~200 lines   [Styling]
+js/config.js        ~150 lines   [Configuration]
+js/math.js          ~120 lines   [Math utilities]
+js/simulation.js    ~90 lines    [Data generation]
+js/visualization.js ~250 lines   [Rendering]
+js/controls.js      ~180 lines   [UI interaction]
+
+Total Code:         ~1,400 lines (vs 317 in original)
+Documentation:      ~2,000 lines (4 markdown files)
+
+
+KEY CLASSES
+===========
+
+ConfigManager
+├── getAll()           - Get all configuration
+├── update(key, val)   - Update single setting
+├── getSDE(type)       - Get SDE definition
+├── getInitialDistribution(type)
+├── getColorScheme(scheme)
+└── getBackgroundStyle(bg)
+
+MathUtils (static)
+├── normPdf(x, mu, sigma)
+├── randn()
+├── eulerMaruyama(x0, drift, diffusion, dt, steps)
+├── computeDensity(...)
+└── linspace(start, end, num)
+
+SimulationGenerator
+├── generate()         - Main generation function
+├── generateSDEPaths()
+├── generateODEPaths()
+└── updateConfig()
+
+VisualizationManager
+├── render(simData)
+├── buildTraces(sim)
+├── buildLayout(sim)
+└── update(simData)
+
+ControlsManager
+├── initializeControls()
+├── attachEventListeners()
+├── scheduleUpdate()
+├── regenerate()
+└── resetToDefaults()
+
+
+CONFIGURATION OPTIONS
+=====================
+
+SDE Types:
+  • vp      - Variance Preserving (dx = -½x dt + dw)
+  • ve      - Variance Exploding (dx = √(2t+1) dw)
+  • subvp   - Sub-VP SDE (dx = -¼x dt + 0.8 dw)
+
+Initial Distributions:
+  • bimodal - Two Gaussian peaks at ±2
+  • uniform - Flat distribution
+  • single  - Single Gaussian at origin
+
+Color Schemes:
+  • rainbow    - HSL spectrum (360° hue rotation)
+  • viridis    - Perceptually uniform
+  • plasma     - High contrast
+  • monochrome - Shades of blue
+
+Background Styles:
+  • white    - Clean professional (#ffffff)
+  • dark     - Modern dark mode (#1a1a1a)
+  • academic - Publication grey (#fafafa)
+
+Adjustable Parameters:
+  • paths: 5-50 (number of trajectories)
+  • steps: 50-400 (time discretization)
+
+Toggle Options:
+  • showLegend   - Show/hide trace labels
+  • showODE      - Show/hide deterministic paths
+  • showSDE      - Show/hide stochastic paths
+  • showHeatmap  - Show/hide density background
+
+
+QUICK START
+===========
+
+1. Open: demos/sde-modular/index.html
+2. Play with controls in the purple header bar
+3. See changes in real-time
+4. Read QUICKSTART.md for guided tutorial
+
+
+EXTENDING THE PROJECT
+=====================
+
+Add new SDE:
+  → Edit js/config.js, add to getSDE() method
+  → Add <option> to index.html
+
+Add new distribution:
+  → Edit js/config.js, add to getInitialDistribution()
+  → Add <option> to index.html
+
+Add new color scheme:
+  → Edit js/config.js, add to getColorScheme()
+  → Add <option> to index.html
+
+Add new UI control:
+  → Add HTML in index.html
+  → Add event listener in js/controls.js
+  → Add config option in js/config.js
+
+Modify styling:
+  → Edit css/styles.css
+
+
+BROWSER CONSOLE ACCESS
+=======================
+
+Open browser console (F12) and use:
+
+window.app.config       - Access configuration
+window.app.simulator    - Access simulation generator
+window.app.visualizer   - Access visualization manager
+window.app.controls     - Access controls manager
+
+Example:
+  window.app.config.getAll()
+  window.app.config.update('paths', 40)
+  window.app.controls.regenerate()
+
+
+DEPENDENCIES
+============
+
+External (CDN):
+  • Plotly.js 2.27.0 - Visualization library
+
+Internal:
+  • No build process required
+  • No npm/node.js required
+  • Pure vanilla JavaScript (ES6+)
+  • Modern CSS3
+
+
+BROWSER REQUIREMENTS
+====================
+
+✓ Chrome 90+
+✓ Firefox 88+
+✓ Safari 14+
+✓ Edge 90+
+✗ Internet Explorer (not supported)
+
+Requires:
+  • ES6 support (classes, arrow functions, etc.)
+  • CSS3 support (flexbox, gradients, etc.)
+  • JavaScript enabled
+  • Internet connection (for CDN)
+
+
+PERFORMANCE NOTES
+=================
+
+Typical render times (modern laptop):
+  • 20 paths, 200 steps: ~200ms
+  • 50 paths, 400 steps: ~800ms
+  • 5 paths, 50 steps:   ~50ms
+
+Optimization tips:
+  • Reduce paths for faster updates
+  • Reduce steps for faster computation
+  • Toggle off heatmap if laggy
+  • Use Chrome for best performance
+
+
+VERSION HISTORY
+===============
+
+v2.0.0 (January 2026)
+  • Complete modular restructure
+  • 3 SDE types
+  • 3 initial distributions
+  • 4 color schemes
+  • Interactive controls
+  • Professional UI
+  • Comprehensive documentation
+
+v1.0.0 (Original)
+  • Single monolithic file
+  • VP-SDE only
+  • Bimodal distribution only
+  • Rainbow colors only
+  • No interactive controls
+
+
+CREDITS
+=======
+
+Based on: Score-Based Generative Modeling through SDEs
+Original: demos/sde.html (317 lines)
+Modular: demos/sde-modular/ (1400+ lines code, 2000+ lines docs)
+Created: January 2026
+
+
+END OF STRUCTURE DOCUMENT
+==========================

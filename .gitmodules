@@ -1,0 +1,7 @@
+[submodule "libs/plotly.js"]
+	path = libs/plotly.js
+    url = https://github.com/plotly/plotly.js
+
+[submodule "libs/diffusers"]
+	path = libs/diffusers
+	url = https://github.com/huggingface/diffusers

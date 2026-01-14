@@ -4,13 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SDE Visualization - Interactive Diffusion Model Explorer</title>
+    
+    <!-- External Libraries -->
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-    <link rel="stylesheet" href="demos/sde-modular/css/styles.css">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
 <!-- Control Panel -->
 <div class="control-panel">
+    <!-- Trajectory Controls -->
     <div class="control-group">
         <label>Paths:</label>
         <input type="range" id="paths-slider" min="5" max="50" step="5" value="20">
@@ -23,6 +28,7 @@
         <span class="value-display" id="steps-value">200</span>
     </div>
 
+    <!-- SDE Type -->
     <div class="control-group">
         <label>SDE Type:</label>
         <select id="sde-select">
@@ -32,6 +38,7 @@
         </select>
     </div>
 
+    <!-- Initial Distribution -->
     <div class="control-group">
         <label>Initial Dist:</label>
         <select id="initial-dist-select">
@@ -41,6 +48,7 @@
         </select>
     </div>
 
+    <!-- Color Scheme -->
     <div class="control-group">
         <label>Colors:</label>
         <select id="color-scheme-select">
@@ -51,6 +59,7 @@
         </select>
     </div>
 
+    <!-- Background -->
     <div class="control-group">
         <label>Background:</label>
         <select id="background-select">
@@ -60,6 +69,7 @@
         </select>
     </div>
 
+    <!-- Toggle Switches -->
     <div class="control-group">
         <label>Legend:</label>
         <div class="toggle-switch" id="legend-toggle"></div>
@@ -80,39 +90,51 @@
         <div class="toggle-switch active" id="heatmap-toggle"></div>
     </div>
 
+    <!-- Action Buttons -->
     <div class="control-group">
         <button id="regenerate-btn">Regenerate</button>
         <button id="reset-btn">Reset</button>
     </div>
 </div>
 
+<!-- Loading Indicator -->
 <div class="loading-indicator" id="loading-indicator">
     Generating visualization...
 </div>
 
+<!-- Chart Container -->
 <div id="chart-container"></div>
 
-<script src="demos/sde-modular/js/config.js"></script>
-<script src="demos/sde-modular/js/math.js"></script>
-<script src="demos/sde-modular/js/simulation.js"></script>
-<script src="demos/sde-modular/js/visualization.js"></script>
-<script src="demos/sde-modular/js/controls.js"></script>
+<!-- JavaScript Modules -->
+<script src="js/config.js"></script>
+<script src="js/math.js"></script>
+<script src="js/simulation.js"></script>
+<script src="js/visualization.js"></script>
+<script src="js/controls.js"></script>
 
+<!-- Main Application -->
 <script>
+    /**
+     * Main Application Initialization
+     */
     (function() {
         'use strict';
-
+        
+        // Initialize managers
         const configManager = new ConfigManager();
         const simulationGenerator = new SimulationGenerator(configManager);
         const visualizationManager = new VisualizationManager('chart-container', configManager);
         const controlsManager = new ControlsManager(configManager, simulationGenerator, visualizationManager);
-
+        
+        // Initial render
+        console.log('Initializing SDE Visualization...');
         controlsManager.showLoading(true);
-
+        
         setTimeout(() => {
             try {
                 const initialData = simulationGenerator.generate();
                 visualizationManager.render(initialData);
+                console.log('Visualization initialized successfully!');
             } catch (error) {
                 console.error('Initialization error:', error);
                 alert('Failed to initialize visualization. Please refresh the page.');
@@ -120,13 +142,16 @@
                 controlsManager.showLoading(false);
             }
         }, 100);
-
+        
+        // Make managers globally accessible for debugging
         window.app = {
             config: configManager,
             simulator: simulationGenerator,
             visualizer: visualizationManager,
             controls: controlsManager
         };
+        
+        console.log('App ready! Access via window.app');
     })();
 </script>
 
