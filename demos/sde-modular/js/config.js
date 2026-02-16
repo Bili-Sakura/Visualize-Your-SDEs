@@ -40,8 +40,8 @@ class ConfigManager {
                 diffusion: (t) => 1.0,
                 muDecay: (t) => Math.exp(-0.5 * t),
                 variance: (t) => 1 - Math.exp(-t),
-                formula: 'dx = -½x dt + dw',
-                reverseFormula: 'dx = [-½x - ∇log p(x)]dt + dw'
+                formula: '$dx = -\\frac{1}{2}x dt + dw$',
+                reverseFormula: '$dx = [-\\frac{1}{2}x - \\nabla\\log p(x)]dt + dw$'
             },
             ve: {
                 name: 'Variance Exploding (VE-SDE)',
@@ -49,8 +49,8 @@ class ConfigManager {
                 diffusion: (t) => Math.sqrt(2 * t + 1),
                 muDecay: (t) => 1,
                 variance: (t) => t * t,
-                formula: 'dx = √(2t+1) dw',
-                reverseFormula: 'dx = -√(2t+1) ∇log p(x) dt + √(2t+1) dw'
+                formula: '$dx = \\sqrt{2t+1} dw$',
+                reverseFormula: '$dx = -\\sqrt{2t+1} \\nabla\\log p(x) dt + \\sqrt{2t+1} dw$'
             },
             subvp: {
                 name: 'Sub-VP SDE',
@@ -58,8 +58,8 @@ class ConfigManager {
                 diffusion: (t) => 0.8,
                 muDecay: (t) => Math.exp(-0.25 * t),
                 variance: (t) => 0.64 * (1 - Math.exp(-0.5 * t)),
-                formula: 'dx = -¼x dt + 0.8 dw',
-                reverseFormula: 'dx = [-¼x - 0.64∇log p(x)]dt + 0.8 dw'
+                formula: '$dx = -\\frac{1}{4}x dt + 0.8 dw$',
+                reverseFormula: '$dx = [-\\frac{1}{4}x - 0.64\\nabla\\log p(x)]dt + 0.8 dw$'
             }
         };
         return equations[type] || equations.vp;

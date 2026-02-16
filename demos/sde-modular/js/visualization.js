@@ -15,7 +15,11 @@ class VisualizationManager {
     render(simulationData) {
         const traces = this.buildTraces(simulationData);
         const layout = this.buildLayout(simulationData);
-        const plotConfig = { responsive: true, displayModeBar: false };
+        const plotConfig = { 
+            responsive: true, 
+            displayModeBar: false,
+            includeMathJax: true
+        };
         
         Plotly.newPlot(this.containerId, traces, layout, plotConfig);
     }
@@ -266,7 +270,7 @@ class VisualizationManager {
      */
     buildAnnotations(sde, textColor) {
         const fontStyle = { size: 14, color: textColor };
-        const formulaStyle = { family: 'Times New Roman', size: 16, style: 'italic', color: textColor };
+        const formulaStyle = { size: 16, color: textColor };
 
         return [
             { text: "Data", x: 0.025, y: 1.1, xref: 'paper', yref: 'paper', showarrow: false, font: fontStyle },
@@ -278,11 +282,11 @@ class VisualizationManager {
             { text: "Data", x: 0.975, y: 1.1, xref: 'paper', yref: 'paper', showarrow: false, font: fontStyle },
             
             // Bottom labels
-            { text: "p₀(x)", x: 0.025, y: -0.05, xref: 'paper', yref: 'paper', showarrow: false, font: formulaStyle },
-            { text: "pₜ(x)", x: 0.25, y: -0.05, xref: 'paper', yref: 'paper', showarrow: false, font: formulaStyle },
-            { text: "p_T(x)", x: 0.5, y: -0.05, xref: 'paper', yref: 'paper', showarrow: false, font: formulaStyle },
-            { text: "pₜ(x)", x: 0.75, y: -0.05, xref: 'paper', yref: 'paper', showarrow: false, font: formulaStyle },
-            { text: "p₀(x)", x: 0.975, y: -0.05, xref: 'paper', yref: 'paper', showarrow: false, font: formulaStyle }
+            { text: "$p_0(x)$", x: 0.025, y: -0.05, xref: 'paper', yref: 'paper', showarrow: false, font: formulaStyle },
+            { text: "$p_t(x)$", x: 0.25, y: -0.05, xref: 'paper', yref: 'paper', showarrow: false, font: formulaStyle },
+            { text: "$p_T(x)$", x: 0.5, y: -0.05, xref: 'paper', yref: 'paper', showarrow: false, font: formulaStyle },
+            { text: "$p_t(x)$", x: 0.75, y: -0.05, xref: 'paper', yref: 'paper', showarrow: false, font: formulaStyle },
+            { text: "$p_0(x)$", x: 0.975, y: -0.05, xref: 'paper', yref: 'paper', showarrow: false, font: formulaStyle }
         ];
     }
 

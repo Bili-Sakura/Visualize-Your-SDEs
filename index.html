@@ -3,141 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SDE Visualization - Interactive Diffusion Model Explorer</title>
-    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
-    <link rel="stylesheet" href="demos/sde-modular/css/styles.css">
+    <title>Visualize Your SDEs - Home</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            background-color: #f8f9fa;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .demo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+        .demo-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #eee;
+        }
+        .demo-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+            border-color: #007bff;
+        }
+        .demo-card h2 {
+            margin-top: 0;
+            font-size: 1.25rem;
+            color: #007bff;
+        }
+        .demo-card p {
+            margin-bottom: 0;
+            font-size: 0.9rem;
+            color: #666;
+            flex-grow: 1;
+        }
+        .footer {
+            margin-top: 3rem;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #888;
+        }
+    </style>
 </head>
 <body>
 
-<div style="background: #f0f0f0; padding: 10px; text-align: center; border-bottom: 1px solid #ddd;">
-    <a href="demos/diffusion-bridge/index.html" style="margin-right: 20px; font-weight: bold;">Diffusion Bridge Demo</a>
-    <a href="demos/sde-modular/index.html" style="font-weight: bold;">SDE Modular Demo</a>
-</div>
-
-<!-- Control Panel -->
-<div class="control-panel">
-    <div class="control-group">
-        <label>Paths:</label>
-        <input type="range" id="paths-slider" min="5" max="50" step="5" value="20">
-        <span class="value-display" id="paths-value">20</span>
+    <h1>Visualize Your SDEs</h1>
+    
+    <div class="demo-grid">
+        <a href="demos/diffusion-bridge/index.html" class="demo-card">
+            <h2>Diffusion Bridge</h2>
+            <p>Interactive exploration of Diffusion Bridge SDEs and their trajectories.</p>
+        </a>
+        
+        <a href="demos/sde-modular/index.html" class="demo-card">
+            <h2>SDE Modular Explorer</h2>
+            <p>A modular approach to visualizing various SDE types (VP, VE, Sub-VP) with interactive controls.</p>
+        </a>
+        
+        <a href="demos/cfm-1d.html" class="demo-card">
+            <h2>CFM 1D</h2>
+            <p>1D Conditional Flow Matching visualization.</p>
+        </a>
+        
+        <a href="demos/ot-flow-1d.html" class="demo-card">
+            <h2>OT Flow 1D</h2>
+            <p>1D Optimal Transport Flow visualization.</p>
+        </a>
+        
+        <a href="demos/u-anim.html" class="demo-card">
+            <h2>U-Animation</h2>
+            <p>Animated visualization of U-shaped trajectories or distributions.</p>
+        </a>
     </div>
 
-    <div class="control-group">
-        <label>Steps:</label>
-        <input type="range" id="steps-slider" min="50" max="400" step="50" value="200">
-        <span class="value-display" id="steps-value">200</span>
+    <div class="footer">
+        &copy; 2026 Visualize Your SDEs Project
     </div>
-
-    <div class="control-group">
-        <label>SDE Type:</label>
-        <select id="sde-select">
-            <option value="vp">VP-SDE</option>
-            <option value="ve">VE-SDE</option>
-            <option value="subvp">Sub-VP SDE</option>
-        </select>
-    </div>
-
-    <div class="control-group">
-        <label>Initial Dist:</label>
-        <select id="initial-dist-select">
-            <option value="bimodal">Bimodal</option>
-            <option value="trimodal">Trimodal</option>
-            <option value="uniform">Uniform</option>
-            <option value="single">Single Gaussian</option>
-            <option value="wide">Wide Gaussian</option>
-            <option value="asymmetric">Asymmetric Bimodal</option>
-            <option value="laplace">Laplace (Heavy Tails)</option>
-        </select>
-    </div>
-
-    <div class="control-group">
-        <label>Colors:</label>
-        <select id="color-scheme-select">
-            <option value="rainbow">Rainbow</option>
-            <option value="viridis">Viridis</option>
-            <option value="plasma">Plasma</option>
-            <option value="monochrome">Monochrome</option>
-        </select>
-    </div>
-
-    <div class="control-group">
-        <label>Background:</label>
-        <select id="background-select">
-            <option value="white">White</option>
-            <option value="dark">Dark</option>
-            <option value="academic">Academic</option>
-        </select>
-    </div>
-
-    <div class="control-group">
-        <label>Legend:</label>
-        <div class="toggle-switch" id="legend-toggle"></div>
-    </div>
-
-    <div class="control-group">
-        <label>ODE:</label>
-        <div class="toggle-switch active" id="ode-toggle"></div>
-    </div>
-
-    <div class="control-group">
-        <label>SDE:</label>
-        <div class="toggle-switch active" id="sde-toggle"></div>
-    </div>
-
-    <div class="control-group">
-        <label>Heatmap:</label>
-        <div class="toggle-switch active" id="heatmap-toggle"></div>
-    </div>
-
-    <div class="control-group">
-        <button id="regenerate-btn">Regenerate</button>
-        <button id="reset-btn">Reset</button>
-    </div>
-</div>
-
-<div class="loading-indicator" id="loading-indicator">
-    Generating visualization...
-</div>
-
-<div id="chart-container"></div>
-
-<script src="demos/sde-modular/js/config.js"></script>
-<script src="demos/sde-modular/js/math.js"></script>
-<script src="demos/sde-modular/js/simulation.js"></script>
-<script src="demos/sde-modular/js/visualization.js"></script>
-<script src="demos/sde-modular/js/controls.js"></script>
-
-<script>
-    (function() {
-        'use strict';
-
-        const configManager = new ConfigManager();
-        const simulationGenerator = new SimulationGenerator(configManager);
-        const visualizationManager = new VisualizationManager('chart-container', configManager);
-        const controlsManager = new ControlsManager(configManager, simulationGenerator, visualizationManager);
-
-        controlsManager.showLoading(true);
-
-        setTimeout(() => {
-            try {
-                const initialData = simulationGenerator.generate();
-                visualizationManager.render(initialData);
-            } catch (error) {
-                console.error('Initialization error:', error);
-                alert('Failed to initialize visualization. Please refresh the page.');
-            } finally {
-                controlsManager.showLoading(false);
-            }
-        }, 100);
-
-        window.app = {
-            config: configManager,
-            simulator: simulationGenerator,
-            visualizer: visualizationManager,
-            controls: controlsManager
-        };
-    })();
-</script>
 
 </body>
 </html>
