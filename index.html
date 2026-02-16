@@ -9,6 +9,11 @@
 </head>
 <body>
 
+<div style="background: #f0f0f0; padding: 10px; text-align: center; border-bottom: 1px solid #ddd;">
+    <a href="demos/diffusion-bridge/index.html" style="margin-right: 20px; font-weight: bold;">Diffusion Bridge Demo</a>
+    <a href="demos/sde-modular/index.html" style="font-weight: bold;">SDE Modular Demo</a>
+</div>
+
 <!-- Control Panel -->
 <div class="control-panel">
     <div class="control-group">
@@ -36,8 +41,12 @@
         <label>Initial Dist:</label>
         <select id="initial-dist-select">
             <option value="bimodal">Bimodal</option>
+            <option value="trimodal">Trimodal</option>
             <option value="uniform">Uniform</option>
             <option value="single">Single Gaussian</option>
+            <option value="wide">Wide Gaussian</option>
+            <option value="asymmetric">Asymmetric Bimodal</option>
+            <option value="laplace">Laplace (Heavy Tails)</option>
         </select>
     </div>
 

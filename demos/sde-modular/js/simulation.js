@@ -101,6 +101,14 @@ class SimulationGenerator {
                 return [-2, 0, 2];
             case 'single':
                 return [-1, 0, 1];
+            case 'trimodal':
+                return [-2, 0, 2];
+            case 'asymmetric':
+                return [-2, 2];
+            case 'laplace':
+                return [-1.5, 0, 1.5];
+            case 'wide':
+                return [-2, 0, 2];
             default:
                 return [-2, 2];
         }

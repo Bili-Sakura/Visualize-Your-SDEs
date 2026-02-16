@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diffusion Bridge Visualizations</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="stylesheet" href="../sde-modular/css/styles.css">
+    <link rel="stylesheet" href="css/sidebar.css">
+</head>
+<body>
+
+<div class="top-nav">
+    <a href="../../index.html" style="margin-right: 20px;">Home</a>
+    <a href="index.html" style="margin-right: 20px; font-weight: bold;">Diffusion Bridge Demo</a>
+    <a href="../sde-modular/index.html">SDE Modular Demo</a>
+</div>
+
+<button class="sidebar-toggle" id="sidebar-toggle">✕</button>
+
+<!-- Control Panel -->
+<div class="control-panel">
+    <div class="control-group">
+        <label>Model:</label>
+        <select id="model-select">
+            <option value="ddbm">DDBM (Bridge)</option>
+            <option value="i2sb">I2SB (Schrödinger)</option>
+            <option value="ddib">DDIB (Dual Diffusion)</option>
+            <option value="turbo">Turbo / CUT (Direct)</option>
+        </select>
+    </div>
+
+    <div class="control-group">
+        <label>Paths:</label>
+        <input type="range" id="paths-slider" min="5" max="50" step="5" value="20">
+        <span class="value-display" id="paths-value">20</span>
+    </div>
+
+    <div class="control-group">
+        <label>Steps:</label>
+        <input type="range" id="steps-slider" min="50" max="400" step="50" value="200">
+        <span class="value-display" id="steps-value">200</span>
+    </div>
+
+    <div class="control-group">
+        <label>Noise σ:</label>
+        <input type="range" id="noise-slider" min="0.1" max="1.5" step="0.1" value="0.8">
+        <span class="value-display" id="noise-value">0.8</span>
+    </div>
+
+    <div class="control-group">
+        <label>Source:</label>
+        <select id="source-dist-select">
+            <option value="single">Single</option>
+            <option value="bimodal">Bimodal</option>
+            <option value="uniform">Uniform</option>
+            <option value="gaussian">Gaussian</option>
+            <option value="trimodal" selected>Trimodal</option>
+        </select>
+    </div>
+
+    <div class="control-group">
+        <label>Source Pos:</label>
+        <input type="range" id="source-pos-slider" min="-4" max="4" step="0.5" value="-2">
+        <span class="value-display" id="source-pos-value">-2</span>
+    </div>
+
+    <div class="control-group">
+        <label>Target:</label>
+        <select id="target-dist-select">
+            <option value="single">Single</option>
+            <option value="bimodal">Bimodal</option>
+            <option value="uniform">Uniform</option>
+            <option value="gaussian">Gaussian</option>
+            <option value="trimodal">Trimodal</option>
+        </select>
+    </div>
+
+    <div class="control-group">
+        <label>Target Pos:</label>
+        <input type="range" id="target-pos-slider" min="-4" max="4" step="0.5" value="2">
+        <span class="value-display" id="target-pos-value">2</span>
+    </div>
+
+    <div class="control-group">
+        <label>Spread:</label>
+        <input type="range" id="spread-slider" min="0.2" max="1.5" step="0.1" value="0.5">
+        <span class="value-display" id="spread-value">0.5</span>
+    </div>
+
+    <div class="control-group">
+        <label>Colors:</label>
+        <select id="color-scheme-select">
+            <option value="rainbow">Rainbow</option>
+            <option value="viridis">Viridis</option>
+            <option value="plasma" selected>Plasma</option>
+            <option value="monochrome">Monochrome</option>
+        </select>
+    </div>
+
+    <div class="control-group">
+        <label>Background:</label>
+        <select id="background-select">
+            <option value="white">White</option>
+            <option value="dark">Dark</option>
+            <option value="academic" selected>Academic</option>
+        </select>
+    </div>
+
+    <div class="control-group">
+        <label>Legend:</label>
+        <div class="toggle-switch" id="legend-toggle"></div>
+    </div>
+
+    <div class="control-group">
+        <label>Heatmap:</label>
+        <div class="toggle-switch active" id="heatmap-toggle"></div>
+    </div>
+
+    <div class="control-group">
+        <button id="regenerate-btn">Regenerate</button>
+        <button id="reset-btn">Reset</button>
+    </div>
+
+    <div class="control-group export-group">
+        <label>Export Plot:</label>
+        <div class="export-buttons">
+            <button id="export-png-btn">PNG</button>
+            <button id="export-svg-btn">SVG</button>
+            <button id="export-pdf-btn" class="full-width">PDF (via SVG)</button>
+        </div>
+    </div>
+</div>
+
+<div class="loading-indicator" id="loading-indicator">
+    Generating visualization...
+</div>
+
+<div id="chart-container"></div>
+
+<script src="js/config.js"></script>
+<script src="js/math.js"></script>
+<script src="js/simulation.js"></script>
+<script src="js/visualization.js"></script>
+<script src="js/controls.js"></script>
+
+<script>
+    (function() {
+        'use strict';
+
+        const configManager = new BridgeConfigManager();
+        const simulationGenerator = new BridgeSimulationGenerator(configManager);
+        const visualizationManager = new BridgeVisualizationManager('chart-container', configManager);
+        const controlsManager = new BridgeControlsManager(configManager, simulationGenerator, visualizationManager);
+
+        controlsManager.showLoading(true);
+
+        setTimeout(() => {
+            try {
+                const initialData = simulationGenerator.generate();
+                visualizationManager.render(initialData);
+            } catch (error) {
+                console.error('Initialization error:', error);
+                alert('Failed to initialize visualization. Please refresh the page.');
+            } finally {
+                controlsManager.showLoading(false);
+            }
+        }, 100);
+
+        window.app = {
+            config: configManager,
+            simulator: simulationGenerator,
+            visualizer: visualizationManager,
+            controls: controlsManager
+        };
+
+        // Sidebar Toggle Logic
+        const sidebarToggle = document.getElementById('sidebar-toggle');
+        const controlPanel = document.querySelector('.control-panel');
+        const chartContainer = document.getElementById('chart-container');
+        const topNav = document.querySelector('.top-nav');
+
+        sidebarToggle.addEventListener('click', () => {
+            const isCollapsed = controlPanel.classList.toggle('collapsed');
+            sidebarToggle.classList.toggle('collapsed');
+            chartContainer.classList.toggle('full-width');
+            topNav.classList.toggle('full-width');
+            
+            sidebarToggle.textContent = isCollapsed ? '☰' : '✕';
+            
+            // Trigger plotly resize
+            setTimeout(() => {
+                window.dispatchEvent(new Event('resize'));
+            }, 300);
+        });
+    })();
+</script>
+
+</body>
+</html>

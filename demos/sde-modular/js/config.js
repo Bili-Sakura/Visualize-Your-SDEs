@@ -91,6 +91,51 @@ class ConfigManager {
                 pdf: (x, mu, sigma) => {
                     return (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * (x / sigma) ** 2);
                 }
+            },
+            trimodal: {
+                name: 'Trimodal Gaussian',
+                sample: () => {
+                    const r = Math.random();
+                    const center = r < 1/3 ? -2 : (r < 2/3 ? 0 : 2);
+                    return center + (Math.random() - 0.5) * 0.5;
+                },
+                pdf: (x, mu, sigma) => {
+                    const normPdf = (x, m, s) =>
+                        (1 / (s * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * ((x - m) / s) ** 2);
+                    return (normPdf(x, -2 * mu, sigma) + normPdf(x, 0, sigma) + normPdf(x, 2 * mu, sigma)) / 3;
+                }
+            },
+            asymmetric: {
+                name: 'Asymmetric Bimodal',
+                sample: () => (Math.random() < 0.7 ? -2 : 2) + (Math.random() - 0.5) * 0.5,
+                pdf: (x, mu, sigma) => {
+                    const normPdf = (x, m, s) =>
+                        (1 / (s * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * ((x - m) / s) ** 2);
+                    return 0.7 * normPdf(x, -2 * mu, sigma) + 0.3 * normPdf(x, 2 * mu, sigma);
+                }
+            },
+            laplace: {
+                name: 'Laplace (Heavy Tails)',
+                sample: () => {
+                    const u = Math.random() - 0.5;
+                    const b = 0.8;
+                    return u < 0 ? b * Math.log(1 + 2 * u) : -b * Math.log(1 - 2 * u);
+                },
+                pdf: (x, mu, sigma) => {
+                    const b = 0.8;
+                    const s0Sq = 2 * b * b;
+                    const effSigma = Math.sqrt(sigma * sigma + s0Sq * mu * mu);
+                    return (1 / (effSigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * (x / effSigma) ** 2);
+                }
+            },
+            wide: {
+                name: 'Wide Gaussian',
+                sample: () => (Math.random() - 0.5) * 4,
+                pdf: (x, mu, sigma) => {
+                    const s0 = 1.2;
+                    const effSigma = Math.sqrt(sigma * sigma + s0 * s0 * mu * mu);
+                    return (1 / (effSigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * (x / effSigma) ** 2);
+                }
             }
         };
         return distributions[type] || distributions.bimodal;
