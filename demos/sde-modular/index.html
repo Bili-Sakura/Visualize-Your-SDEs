@@ -19,7 +19,7 @@
             }
         };
     </script>
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-svg.js"></script>
     
     <!-- Styles -->
     <link rel="stylesheet" href="css/styles.css">
@@ -151,6 +151,9 @@
             try {
                 const initialData = simulationGenerator.generate();
                 visualizationManager.render(initialData);
+                [120, 350, 700].forEach((delay) => {
+                    setTimeout(() => window.dispatchEvent(new Event('resize')), delay);
+                });
                 console.log('Visualization initialized successfully!');
             } catch (error) {
                 console.error('Initialization error:', error);

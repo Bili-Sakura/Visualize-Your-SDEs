@@ -17,7 +17,7 @@
             }
         };
     </script>
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-svg.js"></script>
     <link rel="stylesheet" href="../sde-modular/css/styles.css">
     <link rel="stylesheet" href="css/sidebar.css">
 </head>
@@ -172,6 +172,9 @@
             try {
                 const initialData = simulationGenerator.generate();
                 visualizationManager.render(initialData);
+                [120, 350, 700].forEach((delay) => {
+                    setTimeout(() => window.dispatchEvent(new Event('resize')), delay);
+                });
             } catch (error) {
                 console.error('Initialization error:', error);
                 alert('Failed to initialize visualization. Please refresh the page.');

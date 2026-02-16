@@ -7,6 +7,9 @@ class VisualizationManager {
     constructor(containerId, configManager) {
         this.containerId = containerId;
         this.config = configManager;
+        this.resizeTimeout = null;
+        this.handleWindowResize = this.handleWindowResize.bind(this);
+        window.addEventListener('resize', this.handleWindowResize);
     }
 
     /**
@@ -17,11 +20,14 @@ class VisualizationManager {
         const layout = this.buildLayout(simulationData);
         const plotConfig = { 
             responsive: true, 
-            displayModeBar: false,
+            displayModeBar: true,
+            displaylogo: false,
             includeMathJax: true
         };
         
-        Plotly.newPlot(this.containerId, traces, layout, plotConfig);
+        Plotly.newPlot(this.containerId, traces, layout, plotConfig).then(() => {
+            this.triggerResizePasses([0, 80, 240, 600]);
+        });
     }
 
     /**
@@ -309,6 +315,43 @@ class VisualizationManager {
      */
     update(simulationData) {
         this.render(simulationData);
+    }
+
+    /**
+     * Handle global resize events with a small debounce
+     */
+    handleWindowResize() {
+        this.triggerResize(60);
+    }
+
+    /**
+     * Force Plotly to recompute dimensions after layout changes
+     */
+    triggerResize(delay = 0) {
+        if (this.resizeTimeout) {
+            clearTimeout(this.resizeTimeout);
+        }
+
+        this.resizeTimeout = setTimeout(() => {
+            const plotEl = document.getElementById(this.containerId);
+            if (plotEl && window.Plotly && Plotly.Plots) {
+                Plotly.Plots.resize(plotEl);
+            }
+        }, delay);
+    }
+
+    /**
+     * Run several resize passes to stabilize first render
+     */
+    triggerResizePasses(delays = [0, 120, 300]) {
+        const plotEl = document.getElementById(this.containerId);
+        if (!plotEl || !window.Plotly || !Plotly.Plots) return;
+
+        delays.forEach((delay) => {
+            setTimeout(() => {
+                Plotly.Plots.resize(plotEl);
+            }, delay);
+        });
     }
 }
 

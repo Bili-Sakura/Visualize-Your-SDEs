@@ -7,6 +7,9 @@ class BridgeVisualizationManager {
     constructor(containerId, configManager) {
         this.containerId = containerId;
         this.config = configManager;
+        this.resizeTimeout = null;
+        this.handleWindowResize = this.handleWindowResize.bind(this);
+        window.addEventListener('resize', this.handleWindowResize);
     }
 
     render(sim) {
@@ -14,12 +17,21 @@ class BridgeVisualizationManager {
         const layout = this.buildLayout(sim);
         Plotly.newPlot(this.containerId, traces, layout, { 
             responsive: true, 
-            displayModeBar: false,
+            displayModeBar: true,
+            displaylogo: false,
             includeMathJax: true
+        }).then(() => {
+            this.triggerResizePasses([0, 80, 240, 600]);
         });
     }
 
     export(format) {
+        const graphDiv = document.getElementById(this.containerId);
+        if (!graphDiv || !graphDiv.data) {
+            alert('Plot is not ready yet. Please wait a moment and try again.');
+            return;
+        }
+
         const config = {
             format: format === 'pdf' ? 'svg' : format,
             filename: `diffusion_bridge_${new Date().getTime()}`,
@@ -28,15 +40,23 @@ class BridgeVisualizationManager {
             scale: 2
         };
 
-        if (format === 'pdf') {
-            // Plotly doesn't directly export PDF in browser easily without a server,
-            // but we can trigger a print or export SVG which is vector-based.
-            // For now, we'll export SVG and alert the user it's the best vector format.
-            Plotly.downloadImage(this.containerId, config);
-            alert('SVG exported. You can save/print this as PDF from your browser.');
-        } else {
-            Plotly.downloadImage(this.containerId, config);
-        }
+        Plotly.downloadImage(graphDiv, config).catch(() => {
+            return Plotly.toImage(graphDiv, config).then((dataUrl) => {
+                const link = document.createElement('a');
+                link.href = dataUrl;
+                link.download = `${config.filename}.${config.format}`;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+            });
+        }).then(() => {
+            if (format === 'pdf') {
+                alert('SVG exported. You can save/print this as PDF from your browser.');
+            }
+        }).catch((error) => {
+            console.error('Export failed:', error);
+            alert('Export failed. Please try again after the plot finishes rendering.');
+        });
     }
 
     buildTraces(sim) {
@@ -209,6 +229,34 @@ class BridgeVisualizationManager {
             { type: 'line', x0: 0.06, y0: -0.05, x1: 0.94, y1: -0.05, xref: 'paper', yref: 'paper', line: { width: 2, color: lineColor } },
             { type: 'path', path: 'M 0.92 -0.04 L 0.94 -0.05 L 0.92 -0.06', xref: 'paper', yref: 'paper', line: { width: 2, color: lineColor } }
         ];
+    }
+
+    handleWindowResize() {
+        this.triggerResize(60);
+    }
+
+    triggerResize(delay = 0) {
+        if (this.resizeTimeout) {
+            clearTimeout(this.resizeTimeout);
+        }
+
+        this.resizeTimeout = setTimeout(() => {
+            const plotEl = document.getElementById(this.containerId);
+            if (plotEl && window.Plotly && Plotly.Plots) {
+                Plotly.Plots.resize(plotEl);
+            }
+        }, delay);
+    }
+
+    triggerResizePasses(delays = [0, 120, 300]) {
+        const plotEl = document.getElementById(this.containerId);
+        if (!plotEl || !window.Plotly || !Plotly.Plots) return;
+
+        delays.forEach((delay) => {
+            setTimeout(() => {
+                Plotly.Plots.resize(plotEl);
+            }, delay);
+        });
     }
 }
 
