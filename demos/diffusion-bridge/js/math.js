@@ -78,9 +78,10 @@ class BridgeMathUtils {
 
     // --- DBIM (Diffusion Bridge Implicit Models) ---
     // From 4th-MAVIC-T: z_t = a_t·x_T + b_t·x_0 + c_t·ε
-    // VP schedule: alpha_t, rho_t, rho_bar_t (arxiv.org/abs/2405.15885)
+    // 4th-MAVIC-T: sigma=0 → target, sigma=sigma_max → source. We want t=0→source, t=T→target.
+    // So sigma = (T-t)/T * sigmaMax inverts the mapping.
     static getDBIMSchedule(t, T, sigmaMax, betaMin = 0.1, betaD = 2.0) {
-        const sigma = (t / Math.max(T, 1e-10)) * sigmaMax;
+        const sigma = ((T - t) / Math.max(T, 1e-10)) * sigmaMax;
         const tT = sigmaMax;
         const alphaT = Math.exp(-0.5 * betaMin * tT - 0.25 * betaD * tT * tT);
         const alpha_t = Math.exp(-0.5 * betaMin * sigma - 0.25 * betaD * sigma * sigma);
