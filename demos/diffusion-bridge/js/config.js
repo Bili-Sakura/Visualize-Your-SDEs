@@ -18,10 +18,11 @@ class BridgeConfigManager {
             targetCenter: 2,
             sourceSpread: 0.5,
             targetSpread: 0.5,
-            modelType: 'ddbm',
+            modelType: 'dbim',
             colorScheme: 'plasma',
             showLegend: false,
             showHeatmap: true,
+            showMeanPath: true,
             background: 'academic'
         };
     }

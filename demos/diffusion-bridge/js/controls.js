@@ -32,6 +32,7 @@ class BridgeControlsManager {
         document.getElementById('background-select').value = this.config.get('background');
         this.updateToggle('legend-toggle', this.config.get('showLegend'));
         this.updateToggle('heatmap-toggle', this.config.get('showHeatmap'));
+        this.updateToggle('meanpath-toggle', this.config.get('showMeanPath'));
     }
 
     attachEventListeners() {
@@ -109,6 +110,10 @@ class BridgeControlsManager {
 
         document.getElementById('heatmap-toggle').addEventListener('click', (e) => {
             this.toggleControl(e.target, 'showHeatmap');
+        });
+
+        document.getElementById('meanpath-toggle').addEventListener('click', (e) => {
+            this.toggleControl(e.target, 'showMeanPath');
         });
 
         document.getElementById('reset-btn').addEventListener('click', () => {

@@ -101,23 +101,24 @@ class BridgeVisualizationManager {
             });
         });
 
-        // ODE path (mean trajectory)
-        const meanPath = sim.t.map(t => {
-            const s = t / sim.t[sim.t.length - 1];
-            return (1 - s) * sim.sourceX + s * sim.targetY;
-        });
-        traces.push({
-            x: sim.t,
-            y: meanPath,
-            xaxis: 'x2',
-            yaxis: 'y',
-            type: 'scattergl',
-            mode: 'lines',
-            line: { color: 'white', width: 3 },
-            name: 'Mean',
-            showlegend: cfg.showLegend,
-            hoverinfo: 'skip'
-        });
+        // ODE path (mean trajectory): E[z_t] = a_t·x + b_t·y, model-specific
+        if (cfg.showMeanPath) {
+            const meanPath = BridgeMathUtils.getMeanPath(
+                cfg.modelType, sim.sourceX, sim.targetY, sim.t, cfg.sigmaMax
+            );
+            traces.push({
+                x: sim.t,
+                y: meanPath,
+                xaxis: 'x2',
+                yaxis: 'y',
+                type: 'scattergl',
+                mode: 'lines',
+                line: { color: 'white', width: 3 },
+                name: 'Mean',
+                showlegend: cfg.showLegend,
+                hoverinfo: 'skip'
+            });
+        }
 
         // Panel 3: Target marginal (y) - RIGHT
         traces.push(this.createMarginalTrace(

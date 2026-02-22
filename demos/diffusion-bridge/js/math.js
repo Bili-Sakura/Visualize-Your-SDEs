@@ -146,6 +146,21 @@ class BridgeMathUtils {
         return tArray.map(t => this.sample(type, x, y, t, T, sigmaMax));
     }
 
+    /** ODE / mean trajectory: E[z_t] = a_t·x + b_t·y (no noise) */
+    static getMeanPath(type, sourceX, targetY, tArray, sigmaMax) {
+        const T = tArray[tArray.length - 1];
+        return tArray.map(t => {
+            let schedule;
+            if (type === 'ddbm') schedule = this.getDDBMSchedule(t, T, sigmaMax);
+            else if (type === 'dbim') schedule = this.getDBIMSchedule(t, T, sigmaMax);
+            else if (type === 'i2sb') schedule = this.getI2SBSchedule(t, T, sigmaMax);
+            else if (type === 'ddib') schedule = this.getDDIBSchedule(t, T, sigmaMax);
+            else if (type === 'turbo') schedule = this.getTurboSchedule(t, T, sigmaMax);
+            else schedule = this.getDDBMSchedule(t, T, sigmaMax);
+            return schedule.a_t * sourceX + schedule.b_t * targetY;
+        });
+    }
+
     static computeDensity(type, xGrid, tArray, pairs, sigmaMax) {
         const T = tArray[tArray.length - 1];
         const densityZ = [];
