@@ -76,6 +76,27 @@ class BridgeMathUtils {
         return { a_t, b_t, sigma_t };
     }
 
+    // --- DBIM (Diffusion Bridge Implicit Models) ---
+    // From 4th-MAVIC-T: z_t = a_t·x_T + b_t·x_0 + c_t·ε
+    // VP schedule: alpha_t, rho_t, rho_bar_t (arxiv.org/abs/2405.15885)
+    static getDBIMSchedule(t, T, sigmaMax, betaMin = 0.1, betaD = 2.0) {
+        const sigma = (t / Math.max(T, 1e-10)) * sigmaMax;
+        const tT = sigmaMax;
+        const alphaT = Math.exp(-0.5 * betaMin * tT - 0.25 * betaD * tT * tT);
+        const alpha_t = Math.exp(-0.5 * betaMin * sigma - 0.25 * betaD * sigma * sigma);
+        const alpha_bar_t = alpha_t / alphaT;
+        const rho_t_sq = Math.max(0, Math.exp(betaMin * sigma + 0.5 * betaD * sigma * sigma) - 1);
+        const rho_t = Math.sqrt(rho_t_sq);
+        const rho_T_sq = Math.max(0, Math.exp(betaMin * tT + 0.5 * betaD * tT * tT) - 1);
+        const rho_T = Math.sqrt(rho_T_sq);
+        const rho_bar_t_sq = Math.max(0, rho_T_sq - rho_t_sq);
+        const rho_bar_t = Math.sqrt(rho_bar_t_sq);
+        const a_t = rho_T_sq > 1e-20 ? (alpha_bar_t * rho_t_sq) / rho_T_sq : (sigma >= tT * 0.99 ? 1 : 0);
+        const b_t = rho_T_sq > 1e-20 ? (alpha_t * rho_bar_t_sq) / rho_T_sq : (sigma <= 1e-6 ? 1 : 0);
+        const c_t = rho_T > 1e-20 ? (alpha_t * rho_bar_t * rho_t) / rho_T : 0;
+        return { a_t, b_t, sigma_t: c_t };
+    }
+
     // --- Turbo / CUT ---
     // Direct mapping, low noise
     static getTurboSchedule(t, T, sigmaMax) {
@@ -101,6 +122,9 @@ class BridgeMathUtils {
                 break;
             case 'turbo':
                 schedule = this.getTurboSchedule(t, T, sigmaMax);
+                break;
+            case 'dbim':
+                schedule = this.getDBIMSchedule(t, T, sigmaMax);
                 break;
             case 'ddbm':
             default:
@@ -132,6 +156,7 @@ class BridgeMathUtils {
             if (type === 'i2sb') return this.getI2SBSchedule(t, T, sigmaMax);
             if (type === 'ddib') return this.getDDIBSchedule(t, T, sigmaMax);
             if (type === 'turbo') return this.getTurboSchedule(t, T, sigmaMax);
+            if (type === 'dbim') return this.getDBIMSchedule(t, T, sigmaMax);
             return this.getDDBMSchedule(t, T, sigmaMax);
         });
 
