@@ -9,23 +9,43 @@ class BridgeVisualizationManager {
         this.config = configManager;
         this.resizeTimeout = null;
         this.handleWindowResize = this.handleWindowResize.bind(this);
-        window.addEventListener('resize', this.handleWindowResize);
+        if (typeof window !== 'undefined') {
+            window.addEventListener('resize', this.handleWindowResize);
+        }
     }
 
-    render(sim) {
+    /**
+     * Return plot data without rendering (for app / headless usage).
+     * Returns { traces, layout, plotConfig } that can be consumed by
+     * any Plotly-compatible renderer (e.g. react-plotly.js).
+     */
+    getPlotData(sim) {
         const traces = this.buildTraces(sim);
         const layout = this.buildLayout(sim);
-        Plotly.newPlot(this.containerId, traces, layout, { 
-            responsive: true, 
+        const plotConfig = {
+            responsive: true,
             displayModeBar: true,
             displaylogo: false,
             includeMathJax: true
-        }).then(() => {
+        };
+        return { traces, layout, plotConfig };
+    }
+
+    render(sim) {
+        const { traces, layout, plotConfig } = this.getPlotData(sim);
+
+        if (typeof Plotly === 'undefined' || typeof document === 'undefined') {
+            return { traces, layout, plotConfig };
+        }
+
+        Plotly.newPlot(this.containerId, traces, layout, plotConfig).then(() => {
             this.triggerResizePasses([0, 80, 240, 600]);
         });
     }
 
     export(format) {
+        if (typeof document === 'undefined' || typeof Plotly === 'undefined') return;
+
         const graphDiv = document.getElementById(this.containerId);
         if (!graphDiv || !graphDiv.data) {
             alert('Plot is not ready yet. Please wait a moment and try again.');
@@ -237,21 +257,25 @@ class BridgeVisualizationManager {
     }
 
     triggerResize(delay = 0) {
+        if (typeof document === 'undefined') return;
+
         if (this.resizeTimeout) {
             clearTimeout(this.resizeTimeout);
         }
 
         this.resizeTimeout = setTimeout(() => {
             const plotEl = document.getElementById(this.containerId);
-            if (plotEl && window.Plotly && Plotly.Plots) {
+            if (plotEl && typeof Plotly !== 'undefined' && Plotly.Plots) {
                 Plotly.Plots.resize(plotEl);
             }
         }, delay);
     }
 
     triggerResizePasses(delays = [0, 120, 300]) {
+        if (typeof document === 'undefined') return;
+
         const plotEl = document.getElementById(this.containerId);
-        if (!plotEl || !window.Plotly || !Plotly.Plots) return;
+        if (!plotEl || typeof Plotly === 'undefined' || !Plotly.Plots) return;
 
         delays.forEach((delay) => {
             setTimeout(() => {
@@ -261,4 +285,15 @@ class BridgeVisualizationManager {
     }
 }
 
-window.BridgeVisualizationManager = BridgeVisualizationManager;
+// Universal module export: works in browser <script>, CommonJS, and AMD
+(function (root, factory) {
+    var cls = factory();
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = cls;
+    } else if (typeof define === 'function' && define.amd) {
+        define(function () { return cls; });
+    }
+    if (typeof window !== 'undefined') {
+        window.BridgeVisualizationManager = cls;
+    }
+}(typeof self !== 'undefined' ? self : this, function () { return BridgeVisualizationManager; }));
