@@ -8,8 +8,11 @@ class BridgeControlsManager {
         this.simulator = simulationGenerator;
         this.visualizer = visualizationManager;
         this.isUpdating = false;
-        this.initializeControls();
-        this.attachEventListeners();
+
+        if (typeof document !== 'undefined') {
+            this.initializeControls();
+            this.attachEventListeners();
+        }
     }
 
     initializeControls() {
@@ -175,9 +178,21 @@ class BridgeControlsManager {
     }
 
     showLoading(show) {
+        if (typeof document === 'undefined') return;
         const indicator = document.getElementById('loading-indicator');
         indicator.classList.toggle('active', show);
     }
 }
 
-window.BridgeControlsManager = BridgeControlsManager;
+// Universal module export: works in browser <script>, CommonJS, and AMD
+(function (root, factory) {
+    var cls = factory();
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = cls;
+    } else if (typeof define === 'function' && define.amd) {
+        define(function () { return cls; });
+    }
+    if (typeof window !== 'undefined') {
+        window.BridgeControlsManager = cls;
+    }
+}(typeof self !== 'undefined' ? self : this, function () { return BridgeControlsManager; }));

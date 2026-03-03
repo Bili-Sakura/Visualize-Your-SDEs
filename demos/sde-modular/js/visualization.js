@@ -9,21 +9,37 @@ class VisualizationManager {
         this.config = configManager;
         this.resizeTimeout = null;
         this.handleWindowResize = this.handleWindowResize.bind(this);
-        window.addEventListener('resize', this.handleWindowResize);
+        if (typeof window !== 'undefined') {
+            window.addEventListener('resize', this.handleWindowResize);
+        }
+    }
+
+    /**
+     * Return plot data without rendering (for app / headless usage).
+     * Returns { traces, layout, plotConfig } that can be consumed by
+     * any Plotly-compatible renderer (e.g. react-plotly.js).
+     */
+    getPlotData(simulationData) {
+        const traces = this.buildTraces(simulationData);
+        const layout = this.buildLayout(simulationData);
+        const plotConfig = {
+            responsive: true,
+            displayModeBar: true,
+            displaylogo: false,
+            includeMathJax: true
+        };
+        return { traces, layout, plotConfig };
     }
 
     /**
      * Main render function
      */
     render(simulationData) {
-        const traces = this.buildTraces(simulationData);
-        const layout = this.buildLayout(simulationData);
-        const plotConfig = { 
-            responsive: true, 
-            displayModeBar: true,
-            displaylogo: false,
-            includeMathJax: true
-        };
+        const { traces, layout, plotConfig } = this.getPlotData(simulationData);
+
+        if (typeof Plotly === 'undefined' || typeof document === 'undefined') {
+            return { traces, layout, plotConfig };
+        }
         
         Plotly.newPlot(this.containerId, traces, layout, plotConfig).then(() => {
             this.triggerResizePasses([0, 80, 240, 600]);
@@ -328,13 +344,15 @@ class VisualizationManager {
      * Force Plotly to recompute dimensions after layout changes
      */
     triggerResize(delay = 0) {
+        if (typeof document === 'undefined') return;
+
         if (this.resizeTimeout) {
             clearTimeout(this.resizeTimeout);
         }
 
         this.resizeTimeout = setTimeout(() => {
             const plotEl = document.getElementById(this.containerId);
-            if (plotEl && window.Plotly && Plotly.Plots) {
+            if (plotEl && typeof Plotly !== 'undefined' && Plotly.Plots) {
                 Plotly.Plots.resize(plotEl);
             }
         }, delay);
@@ -344,8 +362,10 @@ class VisualizationManager {
      * Run several resize passes to stabilize first render
      */
     triggerResizePasses(delays = [0, 120, 300]) {
+        if (typeof document === 'undefined') return;
+
         const plotEl = document.getElementById(this.containerId);
-        if (!plotEl || !window.Plotly || !Plotly.Plots) return;
+        if (!plotEl || typeof Plotly === 'undefined' || !Plotly.Plots) return;
 
         delays.forEach((delay) => {
             setTimeout(() => {
@@ -355,5 +375,15 @@ class VisualizationManager {
     }
 }
 
-// Export
-window.VisualizationManager = VisualizationManager;
+// Universal module export: works in browser <script>, CommonJS, and AMD
+(function (root, factory) {
+    var cls = factory();
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = cls;
+    } else if (typeof define === 'function' && define.amd) {
+        define(function () { return cls; });
+    }
+    if (typeof window !== 'undefined') {
+        window.VisualizationManager = cls;
+    }
+}(typeof self !== 'undefined' ? self : this, function () { return VisualizationManager; }));

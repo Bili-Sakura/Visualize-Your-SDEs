@@ -198,4 +198,15 @@ class BridgeMathUtils {
     }
 }
 
-window.BridgeMathUtils = BridgeMathUtils;
+// Universal module export: works in browser <script>, CommonJS, and AMD
+(function (root, factory) {
+    var cls = factory();
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = cls;
+    } else if (typeof define === 'function' && define.amd) {
+        define(function () { return cls; });
+    }
+    if (typeof window !== 'undefined') {
+        window.BridgeMathUtils = cls;
+    }
+}(typeof self !== 'undefined' ? self : this, function () { return BridgeMathUtils; }));
