@@ -1,7 +1,7 @@
 /**
  * Visualization Manager for Diffusion Bridge
- * Layout: Target (y) at t=0 | Forward Bridge | Source (x) at t=T
- * Notation: z_0 = y (target), z_T ≈ x (source)
+ * Layout: Source (x) at t=T | Reverse Bridge | Target (y) at t=0
+ * Generation/Reverse process: x (left, t=T) → y (right, t=0)
  */
 
 class BridgeVisualizationManager {
@@ -85,13 +85,13 @@ class BridgeVisualizationManager {
         const cfg = this.config.getAll();
         const colorScheme = this.config.getColorScheme(cfg.colorScheme);
 
-        // Panel 1: Target marginal (y) at t=0 - LEFT
+        // Panel 1: Source marginal (x) at t=T - LEFT
         traces.push(this.createMarginalTrace(
-            sim.targetMarginal, sim.xGrid, 'x', 'y',
-            colorScheme.targetColor, 'p(y)', true
+            sim.sourceMarginal, sim.xGrid, 'x', 'y',
+            colorScheme.sourceColor, 'p(x)', true
         ));
 
-        // Panel 2: Forward Bridge
+        // Panel 2: Reverse Bridge (generation process, t: T → 0)
         if (cfg.showHeatmap) {
             traces.push({
                 z: sim.densityZ,
@@ -165,10 +165,10 @@ class BridgeVisualizationManager {
             });
         }
 
-        // Panel 3: Source marginal (x) at t=T - RIGHT
+        // Panel 3: Target marginal (y) at t=0 - RIGHT
         traces.push(this.createMarginalTrace(
-            sim.sourceMarginal, sim.xGrid, 'x3', 'y',
-            colorScheme.sourceColor, 'p(x)', false
+            sim.targetMarginal, sim.xGrid, 'x3', 'y',
+            colorScheme.targetColor, 'p(y)', false
         ));
 
         return traces;
@@ -227,7 +227,7 @@ class BridgeVisualizationManager {
                 x: 0.5, y: -0.15, xanchor: 'center',
                 orientation: 'h', font: { color: bgStyle.text }
             },
-            margin: { l: 20, r: 20, t: 100, b: 60 },
+            margin: { l: 20, r: 20, t: 130, b: 60 },
             yaxis: { ...commonAxis, domain: [0, 1] },
             xaxis: {
                 domain: [0, 0.05],
@@ -237,7 +237,9 @@ class BridgeVisualizationManager {
             xaxis2: {
                 domain: [0.06, 0.94],
                 showgrid: false, zeroline: false, showticklabels: true,
-                title: 't'
+                title: 't',
+                range: [cfg.T, 0],
+                autorange: false
             },
             xaxis3: {
                 domain: [0.95, 1.0],
@@ -259,12 +261,14 @@ class BridgeVisualizationManager {
         if (modelType === 'turbo') formulaText = '$\\text{Direct Mapping}$';
 
         return [
-            { text: 'Target $y$', x: 0.025, y: 1.12, xref: 'paper', yref: 'paper', showarrow: false, font: fontStyle },
-            { text: 'Forward Bridge', x: 0.5, y: 1.12, xref: 'paper', yref: 'paper', showarrow: false, font: fontStyle },
+            { text: 'Reverse Bridge / DBIM Generation', x: 0.5, y: 1.22, xref: 'paper', yref: 'paper', showarrow: false, font: { size: 18, color: textColor } },
+            { text: 'Generation / Reverse process ($t: T \\to 0$)', x: 0.5, y: 1.16, xref: 'paper', yref: 'paper', showarrow: false, font: fontStyle },
+            { text: 'Source $x$', x: 0.025, y: 1.12, xref: 'paper', yref: 'paper', showarrow: false, font: fontStyle },
+            { text: 'Reverse Bridge', x: 0.5, y: 1.12, xref: 'paper', yref: 'paper', showarrow: false, font: fontStyle },
             { text: formulaText, x: 0.5, y: 1.06, xref: 'paper', yref: 'paper', showarrow: false, font: formulaStyle },
-            { text: 'Source $x$', x: 0.975, y: 1.12, xref: 'paper', yref: 'paper', showarrow: false, font: fontStyle },
-            { text: '$z_0 = y$', x: 0.025, y: -0.08, xref: 'paper', yref: 'paper', showarrow: false, font: formulaStyle },
-            { text: '$z_T \\approx x$', x: 0.975, y: -0.08, xref: 'paper', yref: 'paper', showarrow: false, font: formulaStyle }
+            { text: 'Target $y$', x: 0.975, y: 1.12, xref: 'paper', yref: 'paper', showarrow: false, font: fontStyle },
+            { text: '$z_T \\approx x$', x: 0.025, y: -0.08, xref: 'paper', yref: 'paper', showarrow: false, font: formulaStyle },
+            { text: '$z_0 = y$', x: 0.975, y: -0.08, xref: 'paper', yref: 'paper', showarrow: false, font: formulaStyle }
         ];
     }
 
