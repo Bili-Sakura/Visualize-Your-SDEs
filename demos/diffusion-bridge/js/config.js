@@ -1,6 +1,6 @@
 /**
  * Configuration Manager for Diffusion Bridge Visualization
- * Based on DDBM: z_t = a_t·x + b_t·y + σ_t·ε, z_0 = y, z_T ≈ x
+ * Notation: z_t = a_t·y + b_t·x + σ_t·ε, z_0 = y (target), z_T ≈ x (source)
  */
 
 class BridgeConfigManager {

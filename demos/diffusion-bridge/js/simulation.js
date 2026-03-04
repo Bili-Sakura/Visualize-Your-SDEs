@@ -19,17 +19,32 @@ class BridgeSimulationGenerator {
 
         const bridgePaths = [];
         const pairs = [];
-        
-        // Sample pairs and generate paths
+        let ddbmBaselinePaths = null;
+
+        // Notation: z_0 = y (target at t=0), z_T ≈ x (source at t=T)
+        // Pairs: x from source, y from target
         for (let p = 0; p < cfg.paths; p++) {
             const x = sourceDist.sample();
             const y = targetDist.sample();
             pairs.push({ x, y });
-            
-            // Generate path for this pair using the selected model
-            // BridgeMathUtils now handles the specific logic for each model
-            const path = BridgeMathUtils.generatePath(cfg.modelType, x, y, t, cfg.sigmaMax);
+
+            // DBIM uses deterministic ODE paths (no noise)
+            const useDeterministic = (cfg.modelType === 'dbim');
+            const path = useDeterministic
+                ? BridgeMathUtils.generatePathDeterministic(cfg.modelType, y, x, t, cfg.sigmaMax)
+                : BridgeMathUtils.generatePath(cfg.modelType, y, x, t, cfg.sigmaMax);
             bridgePaths.push(path);
+        }
+
+        // Optional: faint DDBM baseline for DBIM comparison
+        if (cfg.modelType === 'dbim') {
+            ddbmBaselinePaths = [];
+            const nBaseline = Math.min(5, Math.floor(cfg.paths / 4));
+            for (let p = 0; p < nBaseline; p++) {
+                const pair = pairs[p % pairs.length];
+                const path = BridgeMathUtils.generatePath('ddbm', pair.y, pair.x, t, cfg.sigmaMax);
+                ddbmBaselinePaths.push(path);
+            }
         }
 
         // Compute density using the Monte Carlo samples (pairs)
@@ -51,6 +66,7 @@ class BridgeSimulationGenerator {
             xGrid,
             densityZ,
             bridgePaths,
+            ddbmBaselinePaths,
             sourceMarginal,
             targetMarginal,
             sourceX: pairs.reduce((s, p) => s + p.x, 0) / pairs.length,

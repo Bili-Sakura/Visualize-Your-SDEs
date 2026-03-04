@@ -1,6 +1,7 @@
 /**
  * Visualization Manager for Diffusion Bridge
- * Layout: Target (y) | Forward Bridge | Source (x)
+ * Layout: Target (y) at t=0 | Forward Bridge | Source (x) at t=T
+ * Notation: z_0 = y (target), z_T ≈ x (source)
  */
 
 class BridgeVisualizationManager {
@@ -84,10 +85,10 @@ class BridgeVisualizationManager {
         const cfg = this.config.getAll();
         const colorScheme = this.config.getColorScheme(cfg.colorScheme);
 
-        // Panel 1: Source marginal (x) - LEFT
+        // Panel 1: Target marginal (y) at t=0 - LEFT
         traces.push(this.createMarginalTrace(
-            sim.sourceMarginal, sim.xGrid, 'x', 'y',
-            colorScheme.sourceColor, 'p(x)', true
+            sim.targetMarginal, sim.xGrid, 'x', 'y',
+            colorScheme.targetColor, 'p(y)', true
         ));
 
         // Panel 2: Forward Bridge
@@ -107,7 +108,31 @@ class BridgeVisualizationManager {
             });
         }
 
-        sim.bridgePaths.forEach((path, i) => {
+        // DDBM baseline (faint jagged) for DBIM comparison
+        if (sim.ddbmBaselinePaths && sim.ddbmBaselinePaths.length > 0) {
+            const bgStyle = this.config.getBackgroundStyle(cfg.background);
+            const faintColor = bgStyle.text === '#000' ? 'rgba(100,100,100,0.35)' : 'rgba(180,180,180,0.35)';
+            sim.ddbmBaselinePaths.forEach((path) => {
+                traces.push({
+                    x: sim.t,
+                    y: path,
+                    xaxis: 'x2',
+                    yaxis: 'y',
+                    type: 'scattergl',
+                    mode: 'lines',
+                    line: { color: faintColor, width: 0.8 },
+                    showlegend: false,
+                    hoverinfo: 'skip'
+                });
+            });
+        }
+
+        // Main bridge paths (smooth for DBIM, stochastic for others)
+        const mainPaths = (sim.ddbmBaselinePaths ? sim.bridgePaths.slice(0, 3) : sim.bridgePaths);
+        mainPaths.forEach((path, i) => {
+            const nTotal = sim.bridgePaths.length;
+            const isDbim = cfg.modelType === 'dbim';
+            const lineWidth = isDbim ? 2.5 : 1.5;
             traces.push({
                 x: sim.t,
                 y: path,
@@ -115,16 +140,16 @@ class BridgeVisualizationManager {
                 yaxis: 'y',
                 type: 'scattergl',
                 mode: 'lines',
-                line: { color: colorScheme.getColor(i, cfg.paths), width: 1.5 },
+                line: { color: colorScheme.getColor(i, nTotal), width: lineWidth },
                 showlegend: false,
                 hoverinfo: 'skip'
             });
         });
 
-        // ODE path (mean trajectory): E[z_t] = a_t·x + b_t·y, model-specific
+        // ODE path (mean trajectory): E[z_t] = a_t·y + b_t·x (z_0=y, z_T≈x)
         if (cfg.showMeanPath) {
             const meanPath = BridgeMathUtils.getMeanPath(
-                cfg.modelType, sim.sourceX, sim.targetY, sim.t, cfg.sigmaMax
+                cfg.modelType, sim.targetY, sim.sourceX, sim.t, cfg.sigmaMax
             );
             traces.push({
                 x: sim.t,
@@ -140,10 +165,10 @@ class BridgeVisualizationManager {
             });
         }
 
-        // Panel 3: Target marginal (y) - RIGHT
+        // Panel 3: Source marginal (x) at t=T - RIGHT
         traces.push(this.createMarginalTrace(
-            sim.targetMarginal, sim.xGrid, 'x3', 'y',
-            colorScheme.targetColor, 'p(y)', false
+            sim.sourceMarginal, sim.xGrid, 'x3', 'y',
+            colorScheme.sourceColor, 'p(x)', false
         ));
 
         return traces;
@@ -234,12 +259,12 @@ class BridgeVisualizationManager {
         if (modelType === 'turbo') formulaText = '$\\text{Direct Mapping}$';
 
         return [
-            { text: 'Source $x$', x: 0.025, y: 1.12, xref: 'paper', yref: 'paper', showarrow: false, font: fontStyle },
+            { text: 'Target $y$', x: 0.025, y: 1.12, xref: 'paper', yref: 'paper', showarrow: false, font: fontStyle },
             { text: 'Forward Bridge', x: 0.5, y: 1.12, xref: 'paper', yref: 'paper', showarrow: false, font: fontStyle },
             { text: formulaText, x: 0.5, y: 1.06, xref: 'paper', yref: 'paper', showarrow: false, font: formulaStyle },
-            { text: 'Target $y$', x: 0.975, y: 1.12, xref: 'paper', yref: 'paper', showarrow: false, font: fontStyle },
-            { text: '$z_0 = x$', x: 0.025, y: -0.08, xref: 'paper', yref: 'paper', showarrow: false, font: formulaStyle },
-            { text: '$z_T \\approx y$', x: 0.975, y: -0.08, xref: 'paper', yref: 'paper', showarrow: false, font: formulaStyle }
+            { text: 'Source $x$', x: 0.975, y: 1.12, xref: 'paper', yref: 'paper', showarrow: false, font: fontStyle },
+            { text: '$z_0 = y$', x: 0.025, y: -0.08, xref: 'paper', yref: 'paper', showarrow: false, font: formulaStyle },
+            { text: '$z_T \\approx x$', x: 0.975, y: -0.08, xref: 'paper', yref: 'paper', showarrow: false, font: formulaStyle }
         ];
     }
 

@@ -147,8 +147,8 @@ class BridgeMathUtils {
         return tArray.map(t => this.sample(type, x, y, t, T, sigmaMax));
     }
 
-    /** ODE / mean trajectory: E[z_t] = a_t·x + b_t·y (no noise) */
-    static getMeanPath(type, sourceX, targetY, tArray, sigmaMax) {
+    /** Deterministic ODE path (no noise): z_t = a_t·x + b_t·y. Used for DBIM. */
+    static generatePathDeterministic(type, x, y, tArray, sigmaMax) {
         const T = tArray[tArray.length - 1];
         return tArray.map(t => {
             let schedule;
@@ -158,7 +158,22 @@ class BridgeMathUtils {
             else if (type === 'ddib') schedule = this.getDDIBSchedule(t, T, sigmaMax);
             else if (type === 'turbo') schedule = this.getTurboSchedule(t, T, sigmaMax);
             else schedule = this.getDDBMSchedule(t, T, sigmaMax);
-            return schedule.a_t * sourceX + schedule.b_t * targetY;
+            return schedule.a_t * x + schedule.b_t * y;
+        });
+    }
+
+    /** ODE / mean trajectory: E[z_t] = a_t·y + b_t·x (no noise), z_0=y, z_T≈x */
+    static getMeanPath(type, targetY, sourceX, tArray, sigmaMax) {
+        const T = tArray[tArray.length - 1];
+        return tArray.map(t => {
+            let schedule;
+            if (type === 'ddbm') schedule = this.getDDBMSchedule(t, T, sigmaMax);
+            else if (type === 'dbim') schedule = this.getDBIMSchedule(t, T, sigmaMax);
+            else if (type === 'i2sb') schedule = this.getI2SBSchedule(t, T, sigmaMax);
+            else if (type === 'ddib') schedule = this.getDDIBSchedule(t, T, sigmaMax);
+            else if (type === 'turbo') schedule = this.getTurboSchedule(t, T, sigmaMax);
+            else schedule = this.getDDBMSchedule(t, T, sigmaMax);
+            return schedule.a_t * targetY + schedule.b_t * sourceX;
         });
     }
 
@@ -182,9 +197,9 @@ class BridgeMathUtils {
                 const { a_t, b_t, sigma_t } = schedules[i];
                 let sumLikelihood = 0;
                 
-                // Average likelihood over all pairs
+                // Average likelihood over all pairs (z_0=y, z_T≈x: mu = a_t·y + b_t·x)
                 for (const pair of pairs) {
-                    const mu = a_t * pair.x + b_t * pair.y;
+                    const mu = a_t * pair.y + b_t * pair.x;
                     // Add small epsilon to sigma to avoid division by zero
                     const sigma = sigma_t + 0.05; 
                     sumLikelihood += this.normPdf(xVal, mu, sigma);
